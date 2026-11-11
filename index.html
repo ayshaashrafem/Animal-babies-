@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#fff4dc">
+<title>Animal Babies – Find the Mother</title>
+<style>
+:root{--ink:#26334a;--pink:#ff8e9e;--yellow:#ffd76b;--mint:#a8e6cf;--blue:#a8d8ff;--cream:#fff8e9}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:"Trebuchet MS",system-ui,sans-serif;color:var(--ink);background:linear-gradient(135deg,#fff2d9,#fce8f2 52%,#e4f5ff);display:flex;justify-content:center;padding:16px}
+.app{width:min(760px,100%);align-self:center;background:#ffffffed;border:4px solid white;border-radius:30px;padding:clamp(18px,4vw,32px);box-shadow:0 14px 40px #6b789326;text-align:center}
+h1{font-size:clamp(1.7rem,5vw,2.7rem);margin:4px 0;color:#e45e78}
+.subtitle{font-size:1.05rem;margin:0 0 18px}
+.topline{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.pill{background:#fff0b8;border-radius:999px;padding:9px 15px;font-weight:800}
+.progress{height:13px;background:#edf0f5;border-radius:20px;overflow:hidden;margin:12px 0 22px}
+.bar{height:100%;width:0;background:linear-gradient(90deg,#8ddfbd,#65b9e8);transition:width .3s}
+.prompt{font-size:clamp(1.2rem,4vw,1.6rem);font-weight:900;margin:8px 0}
+.baby-card{background:linear-gradient(145deg,#fff5d6,#ffe7ef);border:3px dashed #ffc1a8;border-radius:24px;padding:18px;margin:14px auto 20px;max-width:380px}
+.baby{font-size:clamp(5rem,18vw,7rem);line-height:1.15}
+.baby-name{font-size:1.35rem;font-weight:900;margin-top:5px}
+.choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.choice{border:3px solid #e4eaf2;border-radius:20px;background:#fff;padding:14px 8px;min-height:116px;font:inherit;font-weight:900;color:var(--ink);cursor:pointer;transition:transform .12s,border-color .12s,background .12s;touch-action:manipulation}
+.choice:active{transform:scale(.96)}
+.choice .animal{display:block;font-size:clamp(2.8rem,10vw,4rem);line-height:1.15}
+.choice .name{display:block;font-size:1rem;margin-top:6px}
+.choice:focus-visible,.btn:focus-visible{outline:4px solid #5aa9e6;outline-offset:3px}
+.choice.correct{background:#dcf8e9;border-color:#42bd80}
+.choice.wrong{background:#ffe4e7;border-color:#f07b8c}
+.choice:disabled{cursor:default}
+.feedback{min-height:42px;margin:16px 0 4px;font-size:1.15rem;font-weight:900}
+.actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:12px}
+.btn{border:0;border-radius:999px;padding:13px 22px;font:inherit;font-weight:900;background:#ffcf61;color:#473716;cursor:pointer;box-shadow:0 4px 0 #e8ad39}
+.btn.secondary{background:#d8efff;color:#24506b;box-shadow:0 4px 0 #9bcce9}
+.btn:active{transform:translateY(2px);box-shadow:0 2px 0 #e8ad39}
+.hidden{display:none!important}
+.result-emoji{font-size:5rem}
+.result-title{font-size:2rem;color:#e45e78}
+.small{font-size:.9rem;color:#657187;margin-top:16px}
+@media(min-width:600px){.choices{grid-template-columns:repeat(4,minmax(0,1fr))}.choice{min-height:132px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main class="app">
+  <h1>🐾 Animal Babies 🐾</h1>
+  <p class="subtitle">Find the mother of each baby!</p>
+  <section id="game">
+    <div class="topline"><span class="pill" id="counter">Question 1 of 5</span><span class="pill" id="score">⭐ Stars: 0</span></div>
+    <div class="progress"><div class="bar" id="bar"></div></div>
+    <p class="prompt">Who is the mother?</p>
+    <div class="baby-card"><div class="baby" id="baby">🐥</div><div class="baby-name" id="babyName">CHICK</div></div>
+    <div class="prompt">Tap the correct mother animal.</div>
+    <div class="choices" id="choices"></div>
+    <div class="feedback" id="feedback" aria-live="polite">You can do it! 🌟</div>
+    <div class="actions"><button class="btn" id="next" disabled>Next question ➜</button></div>
+  </section>
+  <section id="finish" class="hidden">
+    <div class="result-emoji" id="resultEmoji">🏆</div>
+    <h2 class="result-title">Well done!</h2>
+    <p id="resultText"></p>
+    <button class="btn" id="restart">Play again 🔄</button>
+  </section>
+  <div class="small">Look carefully, think, and tap! 💛</div>
+</main>
+<script>
+const animals=[
+ {baby:"🐥",babyName:"CHICK",mother:"🐔",motherName:"HEN",cheer:"A chick grows up with a hen!"},
+ {baby:"🐶",babyName:"PUPPY",mother:"🐕",motherName:"DOG",cheer:"A puppy is a baby dog!"},
+ {baby:"🐐",babyName:"KID",mother:"🐐",motherName:"GOAT",cheer:"A kid is a baby goat!"},
+ {baby:"🐴",babyName:"FOAL",mother:"🐎",motherName:"HORSE",cheer:"A foal is a baby horse!"},
+ {baby:"🐮",babyName:"CALF",mother:"🐄",motherName:"COW",cheer:"A calf is a baby cow!"}
+];
+const $=id=>document.getElementById(id);
+let questions=[],index=0,stars=0,locked=false;
+function shuffle(list){const a=[...list];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function speak(text){if(!('speechSynthesis'in window))return;window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='en-US';u.rate=.88;window.speechSynthesis.speak(u);}
+function sound(ok){try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;const c=new C(),o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.frequency.value=ok?660:220;g.gain.setValueAtTime(.12,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.22);o.start();o.stop(c.currentTime+.23);o.onended=()=>c.close();}catch(e){}}
+function start(){questions=shuffle(animals);index=0;stars=0;locked=false;$('game').classList.remove('hidden');$('finish').classList.add('hidden');render();}
+function render(){locked=false;$('next').disabled=true;$('feedback').textContent='You can do it! 🌟';const q=questions[index];$('counter').textContent='Question '+(index+1)+' of 5';$('score').textContent='⭐ Stars: '+stars;$('bar').style.width=(index/5*100)+'%';$('baby').textContent=q.baby;$('babyName').textContent=q.babyName;$('choices').innerHTML='';
+const options=shuffle(animals);options.forEach(a=>{const b=document.createElement('button');b.className='choice';b.type='button';b.innerHTML='<span class="animal">'+a.mother+'</span><span class="name">'+a.motherName+'</span>';b.setAttribute('aria-label',a.motherName);b.addEventListener('click',()=>choose(a,b));$('choices').appendChild(b);});speak('Who is the mother of this baby? Find the '+q.babyName.toLowerCase()+ ' mother.');}
+function choose(choice,button){if(locked)return;const q=questions[index];if(choice.motherName===q.motherName){locked=true;stars++;button.classList.add('correct');$('feedback').textContent='🌟 Wonderful! '+q.cheer;sound(true);speak('Wonderful! '+q.babyName+'! The mother is '+q.motherName+'.');$('choices').querySelectorAll('button').forEach(b=>b.disabled=true);$('next').disabled=false;$('score').textContent='⭐ Stars: '+stars;$('bar').style.width=((index+1)/5*100)+'%';}else{button.classList.add('wrong');button.disabled=true;$('feedback').textContent='😊 Try another one!';sound(false);speak('Try again!');}}
+$('next').addEventListener('click',()=>{if(!locked)return;index++;if(index<5)render();else finish();});
+function finish(){$('game').classList.add('hidden');$('finish').classList.remove('hidden');$('bar').style.width='100%';$('resultEmoji').textContent=stars===5?'🏆':'🌟';$('resultText').textContent='You earned '+stars+' out of 5 stars. You learned all five animal babies!';speak('Great job! You earned '+stars+' stars.');}
+$('restart').addEventListener('click',start);
+start();
+</script>
+</body>
+</html>
